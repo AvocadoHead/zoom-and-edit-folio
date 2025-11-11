@@ -4,28 +4,64 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Edit, Eye, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { MediaItem } from './MediaItem';
 import { CategoryLabel } from './CategoryLabel';
-import { mediaItems as initialMediaItems, categories as initialCategories } from '@/data/portfolioData';
+// Import types but not default data; runtime content will be loaded from JSON.
+import { mediaItems as defaultMediaItems, categories as defaultCategories } from '@/data/portfolioData';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
 export const PortfolioCanvas = () => {
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [mediaItems, setMediaItems] = useState(initialMediaItems);
-  const [categories, setCategories] = useState(initialCategories);
+  // Determine whether edit mode should be enabled.  When VITE_EDIT_MODE is set
+  // during the build (see vite.config.ts), the global __EDIT_MODE__ constant will
+  // be truthy. We fallback to checking the URL for ?edit=true so that
+  // developers can enable editing locally without a rebuild.  Edit mode is off
+  // by default in production builds.
+  const [isEditMode, setIsEditMode] = useState<boolean>(false);
+  // State for media items and categories. These will be populated from
+  // `/content/portfolio.json` on mount. We provide the existing TS defaults as
+  // a fallback in case the fetch fails or the file is missing so that the app
+  // still renders gracefully.
+  const [mediaItems, setMediaItems] = useState(defaultMediaItems);
+  const [categories, setCategories] = useState(defaultCategories);
   const [currentScale, setCurrentScale] = useState(1);
   const { toast } = useToast();
 
   // Check URL parameter for edit mode
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const editParam = params.get('edit');
-    if (editParam === 'true') {
+    const urlEdit = params.get('edit');
+    // __EDIT_MODE__ is defined at build time in vite.config.ts.  It will be
+    // `true` when VITE_EDIT_MODE=true during development and `false` in
+    // production.
+    // eslint-disable-next-line no-undef
+    const buildEdit: boolean = typeof __EDIT_MODE__ !== 'undefined' ? (__EDIT_MODE__ as boolean) : false;
+    if (buildEdit || urlEdit === 'true') {
       setIsEditMode(true);
       toast({
         title: 'Edit Mode Enabled',
         description: 'You can now drag and resize items',
       });
     }
+    // Load portfolio data from the public folder.  We fetch on mount so that
+    // updates made via the CMS (which commits changes to the JSON file) are
+    // reflected without a rebuild.
+    fetch('/content/portfolio.json')
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to load portfolio data');
+        return res.json();
+      })
+      .then((data) => {
+        if (data.mediaItems && Array.isArray(data.mediaItems)) {
+          setMediaItems(data.mediaItems);
+        }
+        if (data.categories && Array.isArray(data.categories)) {
+          setCategories(data.categories);
+        }
+      })
+      .catch(() => {
+        // If the fetch fails for any reason, fall back to the default TS data.
+        setMediaItems(defaultMediaItems);
+        setCategories(defaultCategories);
+      });
   }, []);
 
   const updateMediaItem = (id: string, updates: any) => {

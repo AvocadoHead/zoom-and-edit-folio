@@ -15,10 +15,17 @@ export const MediaItem = ({ item, isEditMode, onUpdate, scale }: MediaItemProps)
   const [isHovered, setIsHovered] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
 
+  /**
+   * Compute the correct source URL for the media item. For Google Drive hosted
+   * media we build a preview link based on the file id. For YouTube and
+   * arbitrary local/remote sources we simply return the provided `src`.
+   */
   const getMediaSrc = () => {
     if (item.type === 'gdrive' && item.driveId) {
+      // Google Drive preview link; the embed player will allow playback in an iframe
       return `https://drive.google.com/file/d/${item.driveId}/preview`;
     }
+    // For YouTube and local media the `src` field must be defined
     return item.src;
   };
 
@@ -31,11 +38,14 @@ export const MediaItem = ({ item, isEditMode, onUpdate, scale }: MediaItemProps)
     >
       {/* Media Content */}
       <div className="w-full h-full bg-card rounded-lg overflow-hidden shadow-md border border-media-border transition-all duration-300 hover:shadow-lg">
-        {item.type === 'gdrive' ? (
+        {/* Render media differently depending on its type.  We use an iframe for Google Drive and YouTube videos
+            because both services provide their own player UIs. For other types (e.g. static images or videos
+            served from arbitrary URLs) we fall back to an <img> tag. */}
+        {item.type === 'gdrive' || item.type === 'youtube' ? (
           <iframe
             src={getMediaSrc()}
             className="w-full h-full"
-            allow="autoplay"
+            allow="autoplay; fullscreen"
             title={item.title}
           />
         ) : (
