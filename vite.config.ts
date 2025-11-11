@@ -14,7 +14,10 @@ export default defineConfig(({ mode }) => {
   const editMode = process.env.VITE_EDIT_MODE === 'true';
 
   return {
-    base: '/',
+    // Use the repository name as the base path in production to ensure assets
+    // resolve correctly when hosted on GitHub Pages.  During local development
+    // the base should remain '/' so that dev server paths work as expected.
+    base: mode === 'production' ? '/zoom-and-edit-folio/' : '/',
     server: {
       host: '::',
       port: 8080,
