@@ -57,6 +57,19 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        canvas: {
+          bg: "hsl(var(--canvas-bg))",
+          grid: "hsl(var(--canvas-grid))",
+        },
+        media: {
+          border: "hsl(var(--media-border))",
+          hover: "hsl(var(--media-hover))",
+        },
+      },
+      boxShadow: {
+        sm: "var(--shadow-sm)",
+        md: "var(--shadow-md)",
+        lg: "var(--shadow-lg)",
       },
       borderRadius: {
         lg: "var(--radius)",
