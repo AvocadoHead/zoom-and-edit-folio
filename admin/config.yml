@@ -1,0 +1,52 @@
+backend:
+  name: github
+  # Replace this with your own fork if you are deploying under a different repository.
+  repo: AvocadoHead/zoom-and-edit-folio-main
+  branch: main
+  auth_scope: repo
+
+# Images and other media uploaded via the CMS will be stored in this folder
+# within the repository.  The public_folder defines how those files are
+# referenced by the site at runtime.
+media_folder: "public/media/uploads"
+public_folder: "/media/uploads"
+
+collections:
+  # A single-file collection that exposes the portfolio.json for editing.
+  - name: portfolio
+    label: Portfolio Content
+    description: Edit the media items and category labels that appear on the zoomable canvas.
+    files:
+      - file: public/content/portfolio.json
+        name: portfolio
+        label: Portfolio
+        fields:
+          - name: mediaItems
+            label: Media Items
+            widget: list
+            summary: '{{fields.title}} ({{fields.type}})'
+            fields:
+              - { name: id, label: ID, widget: string }
+              - name: type
+                label: Type
+                widget: select
+                options:
+                  - { label: Google Drive, value: gdrive }
+                  - { label: YouTube, value: youtube }
+                  - { label: Local/Remote URL, value: local }
+              - { name: driveId, label: Drive ID, widget: string, required: false }
+              - { name: src, label: Source URL, widget: string, required: false }
+              - { name: x, label: X Position, widget: number, value_type: "float" }
+              - { name: y, label: Y Position, widget: number, value_type: "float" }
+              - { name: width, label: Width, widget: number, value_type: "float" }
+              - { name: title, label: Title, widget: string }
+              - { name: description, label: Description, widget: text }
+          - name: categories
+            label: Categories
+            widget: list
+            summary: '{{fields.text}}'
+            fields:
+              - { name: id, label: ID, widget: string }
+              - { name: text, label: Text, widget: string }
+              - { name: x, label: X Position, widget: number, value_type: "float" }
+              - { name: y, label: Y Position, widget: number, value_type: "float" }
