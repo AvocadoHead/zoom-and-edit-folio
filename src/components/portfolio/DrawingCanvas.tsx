@@ -103,6 +103,38 @@ export const DrawingCanvas = ({
       onMouseMove={draw}
       onMouseUp={stopDrawing}
       onMouseLeave={stopDrawing}
+              onTouchStart={(e: React.TouchEvent<HTMLCanvasElement>) => {
+          const touch = e.touches[0];
+          if (!isDrawMode) return;
+          setIsDrawing(true);
+          const canvas = canvasRef.current;
+          if (!canvas) return;
+          const rect = canvas.getBoundingClientRect();
+          const x = touch.clientX - rect.left;
+          const y = touch.clientY - rect.top;
+          context?.beginPath();
+          context?.moveTo(x, y);
+        }}
+        onTouchMove={(e: React.TouchEvent<HTMLCanvasElement>) => {
+          if (!isDrawing || !isDrawMode || !context) return;
+          const touch = e.touches[0];
+          const canvas = canvasRef.current;
+          if (!canvas) return;
+          const rect = canvas.getBoundingClientRect();
+          const x = touch.clientX - rect.left;
+          const y = touch.clientY - rect.top;
+          context.lineTo(x, y);
+          context.stroke();
+        }}
+        onTouchEnd={() => {
+          if (!isDrawing) return;
+          setIsDrawing(false);
+          const canvas = canvasRef.current;
+          if (canvas) {
+            const dataUrl = canvas.toDataURL();
+            onDrawingChange(dataUrl);
+          }
+        }}
     />
   );
 };
