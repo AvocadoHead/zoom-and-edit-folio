@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Edit, Eye, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import { Edit, Eye, ZoomIn, ZoomOut, Maximize2, Save, Link as LinkIcon, ExternalLink } from 'lucide-react';
 import { MediaItem } from './MediaItem';
 import { CategoryLabel } from './CategoryLabel';
 // Import types but not default data; runtime content will be loaded from JSON.
@@ -24,6 +24,67 @@ export const PortfolioCanvas = () => {
   const [categories, setCategories] = useState(defaultCategories);
   const [currentScale, setCurrentScale] = useState(1);
   const { toast } = useToast();
+
+  /**
+   * Export the current layout (media items and categories) as a JSON file.  This
+   * allows editors to persist their changes by downloading the file and
+   * committing it back to the repository (or uploading via the CMS).  The
+   * downloaded file is named `portfolio-layout.json` to distinguish it from
+   * the source `portfolio.json` in the public folder.
+   */
+  const saveLayout = () => {
+    try {
+      const data = JSON.stringify({ mediaItems, categories }, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'portfolio-layout.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({
+        title: 'Layout Saved',
+        description: 'A JSON file has been downloaded. Commit it to update the site.',
+      });
+    } catch (err) {
+      toast({
+        title: 'Error Saving',
+        description: 'Could not export layout. See console for details.',
+        variant: 'destructive',
+      });
+      // eslint-disable-next-line no-console
+      console.error('Failed to save layout', err);
+    }
+  };
+
+  /**
+   * Copy a public (view-only) link to the clipboard.  This removes the
+   * `edit=true` query parameter from the current URL so the recipient will
+   * see the portfolio in view mode.  A toast confirms the action.
+   */
+  const copyPublicLink = () => {
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('edit');
+      const link = url.toString();
+      void navigator.clipboard.writeText(link).then(() => {
+        toast({
+          title: 'Link Copied',
+          description: 'Public view link copied to clipboard',
+        });
+      });
+    } catch (err) {
+      toast({
+        title: 'Error Copying',
+        description: 'Could not copy link. See console for details.',
+        variant: 'destructive',
+      });
+      // eslint-disable-next-line no-console
+      console.error('Failed to copy public link', err);
+    }
+  };
 
   // Check URL parameter for edit mode
   useEffect(() => {
@@ -125,6 +186,42 @@ export const PortfolioCanvas = () => {
               </>
             )}
           </Button>
+
+          {/* Show additional controls only in edit mode */}
+          {isEditMode && (
+            <>
+              <Button
+                onClick={saveLayout}
+                variant="outline"
+                size="sm"
+                className="shadow-lg"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                Save Layout
+              </Button>
+              <Button
+                onClick={copyPublicLink}
+                variant="outline"
+                size="sm"
+                className="shadow-lg"
+              >
+                <LinkIcon className="w-4 h-4 mr-2" />
+                Copy Link
+              </Button>
+              <Button
+                onClick={() => {
+                  // Open Decap CMS in a new tab/window
+                  window.open('/admin', '_blank');
+                }}
+                variant="outline"
+                size="sm"
+                className="shadow-lg"
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Admin
+              </Button>
+            </>
+          )}
         </motion.div>
       </AnimatePresence>
 

@@ -206,7 +206,9 @@ export const mediaItems: MediaItem[] = [
   {
     id: 'genvid-1',
     type: 'youtube',
-    src: 'https://www.youtube.com/embed/z97tQM8zSrc?autoplay=1',
+    // Autoplay disabled by removing the parameter.  The MediaItem component
+    // will explicitly set autoplay=0 on this URL at runtime.
+    src: 'https://www.youtube.com/embed/z97tQM8zSrc',
     x: 50,
     y: 1130,
     width: 300,
@@ -216,7 +218,7 @@ export const mediaItems: MediaItem[] = [
   {
     id: 'genvid-2',
     type: 'youtube',
-    src: 'https://www.youtube.com/embed/nfn1QE36Ih0?autoplay=1',
+    src: 'https://www.youtube.com/embed/nfn1QE36Ih0',
     x: 400,
     y: 1130,
     width: 300,
@@ -226,7 +228,7 @@ export const mediaItems: MediaItem[] = [
   {
     id: 'genvid-3',
     type: 'youtube',
-    src: 'https://www.youtube.com/embed/ehxLqScw_Lw?autoplay=1',
+    src: 'https://www.youtube.com/embed/ehxLqScw_Lw',
     x: 750,
     y: 1130,
     width: 300,

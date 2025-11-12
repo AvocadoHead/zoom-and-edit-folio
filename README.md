@@ -109,6 +109,33 @@ add items via the CMS or directly edit the JSON file.  Each item in
 portfolio.  If you want to add more items, copy the Google Drive file ID
 or YouTube ID and fill in the fields in the CMS.
 
+### Saving your custom layout
+
+When working in **edit mode** (enabled via the `Edit` button or by
+appending `?edit=true` to the URL) you can reposition and resize items on
+the canvas.  To persist those changes:
+
+1. Click **Save Layout** in the top right.  A file called
+   `portfolio-layout.json` will download containing your current
+   `mediaItems` and `categories` positions.
+2. Replace `public/content/portfolio.json` in your repository with the
+   downloaded file or commit it via the CMS at `/admin`.  On the next
+   deployment, the site will load your updated layout.
+
+### Sharing a view‑only link
+
+While in edit mode you can also click **Copy Link**.  This copies a
+view‑only URL (with the `edit` parameter removed) to your clipboard.  Send
+that link to others to share your portfolio without exposing the editing
+interface.
+
+### Accessing the CMS
+
+If you can’t remember the URL for the CMS, click the **Admin** button in
+edit mode to open `/admin` in a new tab.  From there you can add new media
+items, adjust titles and descriptions, and upload images.  Saving changes
+through the CMS will commit updates directly to your repository.
+
 ## License
 
 This project is released under the MIT license.  See `LICENSE` for details.

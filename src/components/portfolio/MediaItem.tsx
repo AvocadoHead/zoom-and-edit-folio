@@ -21,11 +21,27 @@ export const MediaItem = ({ item, isEditMode, onUpdate, scale }: MediaItemProps)
    * arbitrary local/remote sources we simply return the provided `src`.
    */
   const getMediaSrc = () => {
+    // Construct the appropriate embed URL based on the media type.  For Drive
+    // files we use the standard preview URL.  For YouTube embeds we strip
+    // autoplay parameters and explicitly disable autoplay so that audio does
+    // not begin playing until the user interacts.  All other sources are
+    // returned unchanged.
     if (item.type === 'gdrive' && item.driveId) {
       // Google Drive preview link; the embed player will allow playback in an iframe
       return `https://drive.google.com/file/d/${item.driveId}/preview`;
     }
-    // For YouTube and local media the `src` field must be defined
+    if (item.type === 'youtube' && item.src) {
+      try {
+        const url = new URL(item.src);
+        // Disable autoplay if present
+        url.searchParams.set('autoplay', '0');
+        return url.toString();
+      } catch {
+        // Fallback to the provided source if URL parsing fails
+        return item.src;
+      }
+    }
+    // For YouTube (when src is undefined due to misconfiguration) and local media the `src` field must be defined
     return item.src;
   };
 
@@ -45,7 +61,8 @@ export const MediaItem = ({ item, isEditMode, onUpdate, scale }: MediaItemProps)
           <iframe
             src={getMediaSrc()}
             className="w-full h-full"
-            allow="autoplay; fullscreen"
+            // Only allow fullscreen; disabling autoplay ensures audio does not start until the user presses play
+            allow="fullscreen"
             title={item.title}
           />
         ) : (
