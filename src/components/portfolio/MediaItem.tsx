@@ -1,17 +1,19 @@
 import { useState } from 'react';
 import { Rnd } from 'react-rnd';
-import { motion } from 'framer-motion';
-import { GripVertical } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { GripVertical, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { MediaItem as MediaItemType } from '@/data/portfolioData';
 
 interface MediaItemProps {
   item: MediaItemType;
   isEditMode: boolean;
   onUpdate: (id: string, updates: Partial<MediaItemType>) => void;
+  onDelete: (id: string) => void;
   scale: number;
 }
 
-export const MediaItem = ({ item, isEditMode, onUpdate, scale }: MediaItemProps) => {
+export const MediaItem = ({ item, isEditMode, onUpdate, onDelete, scale }: MediaItemProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
 
@@ -76,10 +78,30 @@ export const MediaItem = ({ item, isEditMode, onUpdate, scale }: MediaItemProps)
 
       {/* Edit Mode Handle */}
       {isEditMode && (
-        <div className="absolute -top-8 left-0 flex items-center gap-2 bg-primary text-primary-foreground px-3 py-1 rounded-md text-sm opacity-0 group-hover:opacity-100 transition-opacity">
-          <GripVertical className="w-4 h-4" />
-          <span className="font-medium">{item.title}</span>
-        </div>
+        <AnimatePresence>
+          {isHovered && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute -top-10 left-0 flex items-center gap-2 bg-card border border-border rounded-lg px-2 py-1 text-sm shadow-lg"
+            >
+              <GripVertical className="w-4 h-4 text-muted-foreground" />
+              <span className="font-medium text-foreground">{item.title}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 ml-2"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(item.id);
+                }}
+              >
+                <Trash2 className="w-3 h-3 text-destructive" />
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       )}
 
       {/* Details Overlay (View Mode) */}

@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Edit, Eye, ZoomIn, ZoomOut, Maximize2, Save, Link as LinkIcon, ExternalLink } from 'lucide-react';
+import { Edit, Eye, ZoomIn, ZoomOut, Maximize2, Save, Link as LinkIcon, Plus, Type, Paintbrush, Trash2 } from 'lucide-react';
 import { MediaItem } from './MediaItem';
 import { CategoryLabel } from './CategoryLabel';
+import { TextElement, TextElementType } from './TextElement';
+import { TextStyleToolbar } from './TextStyleToolbar';
+import { DrawingCanvas } from './DrawingCanvas';
+import { DrawToolbar } from './DrawToolbar';
+import { AddMediaDialog } from './AddMediaDialog';
 // Import types but not default data; runtime content will be loaded from JSON.
 import { mediaItems as defaultMediaItems, categories as defaultCategories } from '@/data/portfolioData';
 import { Button } from '@/components/ui/button';
@@ -22,8 +27,19 @@ export const PortfolioCanvas = () => {
   // still renders gracefully.
   const [mediaItems, setMediaItems] = useState(defaultMediaItems);
   const [categories, setCategories] = useState(defaultCategories);
+  const [textElements, setTextElements] = useState<TextElementType[]>([]);
+  const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
+  const [isDrawMode, setIsDrawMode] = useState(false);
+  const [brushColor, setBrushColor] = useState('#000000');
+  const [brushSize, setBrushSize] = useState(5);
+  const [isEraser, setIsEraser] = useState(false);
+  const [drawingData, setDrawingData] = useState('');
+  const [showAddMedia, setShowAddMedia] = useState(false);
   const [currentScale, setCurrentScale] = useState(1);
   const { toast } = useToast();
+
+  const CANVAS_WIDTH = 25000;
+  const CANVAS_HEIGHT = 25000;
 
   /**
    * Export the current layout (media items and categories) as a JSON file.  This
@@ -34,19 +50,24 @@ export const PortfolioCanvas = () => {
    */
   const saveLayout = () => {
     try {
-      const data = JSON.stringify({ mediaItems, categories }, null, 2);
+      const data = JSON.stringify({ 
+        mediaItems, 
+        categories, 
+        textElements, 
+        drawingData 
+      }, null, 2);
       const blob = new Blob([data], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'portfolio-layout.json';
+      a.download = 'portfolio.json';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       toast({
         title: 'Layout Saved',
-        description: 'A JSON file has been downloaded. Commit it to update the site.',
+        description: 'portfolio.json downloaded. Commit it to /public/content/',
       });
     } catch (err) {
       toast({
@@ -131,17 +152,61 @@ export const PortfolioCanvas = () => {
     );
   };
 
+  const deleteMediaItem = (id: string) => {
+    setMediaItems((items) => items.filter((item) => item.id !== id));
+    toast({ title: 'Media Deleted', description: 'Media item removed from canvas' });
+  };
+
+  const addMediaItem = (item: any) => {
+    const newItem = {
+      ...item,
+      id: `media-${Date.now()}`,
+    };
+    setMediaItems((items) => [...items, newItem]);
+  };
+
   const updateCategory = (id: string, updates: any) => {
     setCategories((cats) =>
       cats.map((cat) => (cat.id === id ? { ...cat, ...updates } : cat))
     );
   };
 
+  const updateTextElement = (id: string, updates: Partial<TextElementType>) => {
+    setTextElements((elements) =>
+      elements.map((el) => (el.id === id ? { ...el, ...updates } : el))
+    );
+  };
+
+  const addTextElement = () => {
+    const newText: TextElementType = {
+      id: `text-${Date.now()}`,
+      text: 'Double-click to edit',
+      x: 2500,
+      y: 2500,
+      fontSize: 24,
+      fontFamily: 'Heebo, sans-serif',
+      color: '#000000',
+      bold: false,
+      italic: false,
+      underline: false,
+      width: 300,
+    };
+    setTextElements([...textElements, newText]);
+    toast({ title: 'Text Added', description: 'New text element added to canvas' });
+  };
+
+  const deleteTextElement = (id: string) => {
+    setTextElements((elements) => elements.filter((el) => el.id !== id));
+    if (selectedTextId === id) setSelectedTextId(null);
+    toast({ title: 'Text Deleted', description: 'Text element removed from canvas' });
+  };
+
   const toggleEditMode = () => {
     const newMode = !isEditMode;
     setIsEditMode(newMode);
+    setIsDrawMode(false);
+    setSelectedTextId(null);
     
-    // Update URL without reload
     const url = new URL(window.location.href);
     if (newMode) {
       url.searchParams.set('edit', 'true');
@@ -159,6 +224,8 @@ export const PortfolioCanvas = () => {
     window.history.pushState({}, '', url);
   };
 
+  const selectedText = textElements.find((el) => el.id === selectedTextId) || null;
+
   return (
     <div className="relative w-full h-screen overflow-hidden bg-canvas-bg">
       {/* Controls */}
@@ -166,7 +233,7 @@ export const PortfolioCanvas = () => {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute top-6 right-6 z-50 flex items-center gap-3"
+          className="absolute top-6 right-6 z-50 flex items-center gap-2"
         >
           <Button
             onClick={toggleEditMode}
@@ -177,19 +244,53 @@ export const PortfolioCanvas = () => {
             {isEditMode ? (
               <>
                 <Eye className="w-4 h-4 mr-2" />
-                View Mode
+                View
               </>
             ) : (
               <>
                 <Edit className="w-4 h-4 mr-2" />
-                Edit Mode
+                Edit
               </>
             )}
           </Button>
 
-          {/* Show additional controls only in edit mode */}
           {isEditMode && (
             <>
+              <Button
+                onClick={() => setShowAddMedia(true)}
+                variant="outline"
+                size="sm"
+                className="shadow-lg"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Media
+              </Button>
+              <Button
+                onClick={addTextElement}
+                variant="outline"
+                size="sm"
+                className="shadow-lg"
+              >
+                <Type className="w-4 h-4 mr-2" />
+                Add Text
+              </Button>
+              <Button
+                onClick={() => {
+                  setIsDrawMode(!isDrawMode);
+                  if (!isDrawMode) {
+                    toast({
+                      title: 'Draw Mode',
+                      description: 'Click and drag to draw on the canvas',
+                    });
+                  }
+                }}
+                variant={isDrawMode ? 'default' : 'outline'}
+                size="sm"
+                className="shadow-lg"
+              >
+                <Paintbrush className="w-4 h-4 mr-2" />
+                Draw
+              </Button>
               <Button
                 onClick={saveLayout}
                 variant="outline"
@@ -197,7 +298,7 @@ export const PortfolioCanvas = () => {
                 className="shadow-lg"
               >
                 <Save className="w-4 h-4 mr-2" />
-                Save Layout
+                Save
               </Button>
               <Button
                 onClick={copyPublicLink}
@@ -208,22 +309,45 @@ export const PortfolioCanvas = () => {
                 <LinkIcon className="w-4 h-4 mr-2" />
                 Copy Link
               </Button>
-              <Button
-                onClick={() => {
-                  // Open Decap CMS in a new tab/window
-                  window.open('/admin', '_blank');
-                }}
-                variant="outline"
-                size="sm"
-                className="shadow-lg"
-              >
-                <ExternalLink className="w-4 h-4 mr-2" />
-                Admin
-              </Button>
             </>
           )}
         </motion.div>
       </AnimatePresence>
+
+      {/* Text Style Toolbar */}
+      <AnimatePresence>
+        {isEditMode && selectedText && (
+          <TextStyleToolbar
+            selectedText={selectedText}
+            onUpdate={updateTextElement}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Draw Toolbar */}
+      <AnimatePresence>
+        {isEditMode && isDrawMode && (
+          <DrawToolbar
+            brushColor={brushColor}
+            onBrushColorChange={setBrushColor}
+            brushSize={brushSize}
+            onBrushSizeChange={setBrushSize}
+            isEraser={isEraser}
+            onEraserToggle={() => setIsEraser(!isEraser)}
+            onClearDrawing={() => {
+              setDrawingData('');
+              toast({ title: 'Drawing Cleared', description: 'Canvas drawing has been cleared' });
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Add Media Dialog */}
+      <AddMediaDialog
+        isOpen={showAddMedia}
+        onClose={() => setShowAddMedia(false)}
+        onAdd={addMediaItem}
+      />
 
       {/* Canvas */}
       <TransformWrapper
@@ -285,18 +409,64 @@ export const PortfolioCanvas = () => {
                 height: '100%',
               }}
             >
-              <div className="relative w-[5000px] h-[5000px]" style={{ willChange: 'transform' }}>
-                {/* Grid Background */}
+              <div 
+                className="relative" 
+                style={{ 
+                  width: `${CANVAS_WIDTH}px`, 
+                  height: `${CANVAS_HEIGHT}px`,
+                  willChange: 'transform',
+                }}
+              >
+                {/* Dot Pattern Background */}
                 <div
                   className="absolute inset-0"
                   style={{
-                    backgroundImage: `
-                      linear-gradient(hsl(var(--canvas-grid)) 1px, transparent 1px),
-                      linear-gradient(90deg, hsl(var(--canvas-grid)) 1px, transparent 1px)
-                    `,
-                    backgroundSize: '50px 50px',
+                    backgroundImage: `radial-gradient(circle, hsl(var(--canvas-grid)) 1px, transparent 1px)`,
+                    backgroundSize: '30px 30px',
+                    opacity: 0.4,
                   }}
                 />
+
+                {/* Subtle fade at edges */}
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    background: `
+                      radial-gradient(
+                        ellipse at center,
+                        transparent 0%,
+                        transparent 60%,
+                        hsl(var(--canvas-bg) / 0.3) 80%,
+                        hsl(var(--canvas-bg) / 0.7) 95%,
+                        hsl(var(--canvas-bg)) 100%
+                      )
+                    `,
+                  }}
+                />
+
+                {/* Drawing Canvas Layer */}
+                {isEditMode && (
+                  <DrawingCanvas
+                    isDrawMode={isDrawMode}
+                    brushColor={brushColor}
+                    brushSize={brushSize}
+                    isEraser={isEraser}
+                    onDrawingChange={setDrawingData}
+                    initialDrawing={drawingData}
+                    canvasWidth={CANVAS_WIDTH}
+                    canvasHeight={CANVAS_HEIGHT}
+                  />
+                )}
+
+                {/* Drawing Preview (View Mode) */}
+                {!isEditMode && drawingData && (
+                  <img
+                    src={drawingData}
+                    alt="Canvas drawing"
+                    className="absolute inset-0 pointer-events-none"
+                    style={{ zIndex: 30 }}
+                  />
+                )}
 
                 {/* Category Labels */}
                 {categories.map((category) => (
@@ -314,8 +484,23 @@ export const PortfolioCanvas = () => {
                   <MediaItem
                     key={item.id}
                     item={item}
-                    isEditMode={isEditMode}
+                    isEditMode={isEditMode && !isDrawMode}
                     onUpdate={updateMediaItem}
+                    onDelete={deleteMediaItem}
+                    scale={currentScale}
+                  />
+                ))}
+
+                {/* Text Elements */}
+                {textElements.map((element) => (
+                  <TextElement
+                    key={element.id}
+                    element={element}
+                    isEditMode={isEditMode && !isDrawMode}
+                    onUpdate={updateTextElement}
+                    onDelete={deleteTextElement}
+                    onSelect={setSelectedTextId}
+                    isSelected={selectedTextId === element.id}
                     scale={currentScale}
                   />
                 ))}
@@ -326,18 +511,19 @@ export const PortfolioCanvas = () => {
       </TransformWrapper>
 
       {/* Instructions */}
-      {isEditMode && (
+      {isEditMode && !isDrawMode && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute bottom-6 left-6 bg-card border border-border rounded-lg p-4 shadow-lg max-w-xs"
+          className="absolute bottom-6 left-6 bg-card border border-border rounded-lg p-4 shadow-lg max-w-xs z-40"
         >
           <h3 className="font-semibold text-sm mb-2">Edit Mode</h3>
           <ul className="text-xs text-muted-foreground space-y-1">
             <li>• Drag items to reposition</li>
-            <li>• Use corner handles to resize</li>
+            <li>• Resize with corner handles</li>
             <li>• Double-click text to edit</li>
-            <li>• Scroll to zoom in/out</li>
+            <li>• Click text to show styling</li>
+            <li>• Hover items to delete</li>
           </ul>
         </motion.div>
       )}
