@@ -68,6 +68,17 @@ export const AddMediaDialog = ({ isOpen, onClose, onAdd }: AddMediaDialogProps) 
         variant: 'destructive',
       });
       return;
+      
+  try {
+    new URL(url);
+  } catch (error) {
+    toast({
+      title: 'Invalid URL',
+      description: 'Please enter a valid URL',
+      variant: 'destructive',
+    });
+    return;
+  }
     }
     const processed = processUrl(url);
     onAdd({
