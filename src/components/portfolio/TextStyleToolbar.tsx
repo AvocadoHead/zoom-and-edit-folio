@@ -10,6 +10,7 @@ interface TextStyleToolbarProps {
   onUpdate: (id: string, updates: Partial<TextElementType>) => void;
 }
 
+// Predefined font families; update this list to add new fonts to the dropdown.
 const fontFamilies = [
   { name: 'Heebo', value: 'Heebo, sans-serif' },
   { name: 'Rubik', value: 'Rubik, sans-serif' },
@@ -18,9 +19,13 @@ const fontFamilies = [
   { name: 'Inter', value: 'Inter, sans-serif' },
 ];
 
+/**
+ * TextStyleToolbar appears when a text element is selected in edit mode.  It
+ * allows users to change the font family, size, color and toggle bold,
+ * italic and underline styles.  The toolbar animates in/out smoothly.
+ */
 export const TextStyleToolbar = ({ selectedText, onUpdate }: TextStyleToolbarProps) => {
   if (!selectedText) return null;
-
   return (
     <motion.div
       initial={{ opacity: 0, y: -20 }}
@@ -43,7 +48,6 @@ export const TextStyleToolbar = ({ selectedText, onUpdate }: TextStyleToolbarPro
           ))}
         </select>
       </div>
-
       {/* Font Size */}
       <div className="flex flex-col gap-1 w-32">
         <Label className="text-xs">Size: {selectedText.fontSize}px</Label>
@@ -55,7 +59,6 @@ export const TextStyleToolbar = ({ selectedText, onUpdate }: TextStyleToolbarPro
           step={1}
         />
       </div>
-
       {/* Color Picker */}
       <div className="flex flex-col gap-1">
         <Label className="text-xs">Color</Label>
@@ -66,7 +69,6 @@ export const TextStyleToolbar = ({ selectedText, onUpdate }: TextStyleToolbarPro
           className="w-10 h-8 rounded border border-input cursor-pointer"
         />
       </div>
-
       {/* Formatting Buttons */}
       <div className="flex items-center gap-1 ml-auto">
         <Button

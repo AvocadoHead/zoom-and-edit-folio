@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Rnd } from 'react-rnd';
-import { motion, AnimatePresence } from 'framer-motion';
-import { GripVertical, Trash2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MediaItem as MediaItemType } from '@/data/portfolioData';
 
@@ -9,6 +9,10 @@ interface MediaItemProps {
   item: MediaItemType;
   isEditMode: boolean;
   onUpdate: (id: string, updates: Partial<MediaItemType>) => void;
+  /**
+   * Delete handler called when the user presses the delete button.  Only
+   * defined in edit mode.  The parent should remove the item from state.
+   */
   onDelete: (id: string) => void;
   scale: number;
 }
@@ -76,32 +80,30 @@ export const MediaItem = ({ item, isEditMode, onUpdate, onDelete, scale }: Media
         )}
       </div>
 
-      {/* Edit Mode Handle */}
+      {/* Edit Mode Handle (shows title when hovering) */}
       {isEditMode && (
-        <AnimatePresence>
-          {isHovered && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute -top-10 left-0 flex items-center gap-2 bg-card border border-border rounded-lg px-2 py-1 text-sm shadow-lg"
-            >
-              <GripVertical className="w-4 h-4 text-muted-foreground" />
-              <span className="font-medium text-foreground">{item.title}</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 ml-2"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(item.id);
-                }}
-              >
-                <Trash2 className="w-3 h-3 text-destructive" />
-              </Button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <div className="absolute -top-8 left-0 flex items-center gap-2 bg-primary text-primary-foreground px-3 py-1 rounded-md text-sm opacity-0 group-hover:opacity-100 transition-opacity">
+          <GripVertical className="w-4 h-4" />
+          <span className="font-medium">{item.title}</span>
+        </div>
+      )}
+
+      {/* Always-visible delete button in edit mode */}
+      {isEditMode && (
+        <div className="absolute top-2 right-2 z-40">
+          <Button
+            variant="destructive"
+            size="icon"
+            className="h-6 w-6"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(item.id);
+            }}
+          >
+            {/* Use a simple × character instead of an icon to keep the dependency list small */}
+            &times;
+          </Button>
+        </div>
       )}
 
       {/* Details Overlay (View Mode) */}
@@ -178,7 +180,10 @@ export const MediaItem = ({ item, isEditMode, onUpdate, onDelete, scale }: Media
           topRight: 'hover:bg-accent',
         }}
       >
-        {content}
+        {/* Wrap content in a relative container to ensure the delete button overlay positions correctly */}
+        <div className="relative w-full h-full">
+          {content}
+        </div>
       </Rnd>
     );
   }

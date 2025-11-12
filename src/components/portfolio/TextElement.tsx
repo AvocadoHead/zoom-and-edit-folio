@@ -4,6 +4,13 @@ import { Type, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 
+/**
+ * The TextElement component renders a draggable and resizable text box on the
+ * canvas.  In edit mode users can double‑click to begin editing the text,
+ * adjust its position via drag, resize it using visible corner handles, and
+ * delete the element entirely.  A small toolbar appears above the element
+ * when hovered to indicate the text tool and provide a delete button.
+ */
 export interface TextElementType {
   id: string;
   text: string;
@@ -41,6 +48,7 @@ export const TextElement = ({
   const [text, setText] = useState(element.text);
   const [isHovered, setIsHovered] = useState(false);
 
+  // When leaving edit mode, persist changes to the parent
   const handleBlur = () => {
     setIsEditing(false);
     if (text !== element.text) {
@@ -48,6 +56,7 @@ export const TextElement = ({
     }
   };
 
+  // Compute inline styles for the text to reflect current formatting
   const textStyle = {
     fontSize: `${element.fontSize}px`,
     fontFamily: element.fontFamily,
@@ -55,8 +64,11 @@ export const TextElement = ({
     fontWeight: element.bold ? 'bold' : 'normal',
     fontStyle: element.italic ? 'italic' : 'normal',
     textDecoration: element.underline ? 'underline' : 'none',
-  };
+  } as React.CSSProperties;
 
+  // The core element content.  In edit mode we show a textarea when
+  // double‑clicked; otherwise we display the text.  A small popover with
+  // type icon and delete button appears when hovered to aid discoverability.
   const content = (
     <div
       className="relative group"
@@ -75,7 +87,6 @@ export const TextElement = ({
           >
             {element.text}
           </div>
-          
           <AnimatePresence>
             {isHovered && (
               <motion.div
@@ -118,6 +129,8 @@ export const TextElement = ({
     </div>
   );
 
+  // Edit mode: allow dragging and resizing; attach handles at corners and
+  // provide custom cursors.  When resizing, update the width and position.
   if (isEditMode) {
     return (
       <Rnd
@@ -142,12 +155,25 @@ export const TextElement = ({
           topRight: true,
           topLeft: true,
         }}
+        resizeHandleStyles={{
+          bottomRight: { cursor: 'nwse-resize' },
+          bottomLeft: { cursor: 'nesw-resize' },
+          topRight: { cursor: 'nesw-resize' },
+          topLeft: { cursor: 'nwse-resize' },
+        }}
+        resizeHandleClasses={{
+          bottomRight: 'hover:bg-accent',
+          bottomLeft: 'hover:bg-accent',
+          topRight: 'hover:bg-accent',
+          topLeft: 'hover:bg-accent',
+        }}
       >
         {content}
       </Rnd>
     );
   }
 
+  // View mode: position absolutely without editing or resizing capabilities
   return (
     <div
       style={{

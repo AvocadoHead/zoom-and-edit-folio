@@ -22,6 +22,13 @@ interface AddMediaDialogProps {
   }) => void;
 }
 
+/**
+ * AddMediaDialog provides a lightweight form for adding new media items to
+ * the canvas.  Users can paste a URL (Google Drive, YouTube, Vimeo or any
+ * direct image/video), specify a title and description, and the component
+ * will extract the appropriate media type.  New items are placed at a
+ * random location near the visible canvas so they don't disappear off‑screen.
+ */
 export const AddMediaDialog = ({ isOpen, onClose, onAdd }: AddMediaDialogProps) => {
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
@@ -36,26 +43,24 @@ export const AddMediaDialog = ({ isOpen, onClose, onAdd }: AddMediaDialogProps) 
     if (driveMatch) {
       return { type: 'gdrive' as const, driveId: driveMatch[1] };
     }
-
     // YouTube
     const youtubeMatch = inputUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/);
     if (youtubeMatch) {
       return { type: 'youtube' as const, src: `https://www.youtube.com/embed/${youtubeMatch[1]}` };
     }
-
     // Vimeo
     const vimeoMatch = inputUrl.match(/vimeo\.com\/(\d+)/);
     if (vimeoMatch) {
       return { type: 'local' as const, src: `https://player.vimeo.com/video/${vimeoMatch[1]}` };
     }
-
     // Direct URL
     return { type: 'local' as const, src: inputUrl };
   };
 
+  const getRandomPosition = () => 3000 + Math.random() * 2000;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!url || !title || !description) {
       toast({
         title: 'Missing Fields',
@@ -64,23 +69,20 @@ export const AddMediaDialog = ({ isOpen, onClose, onAdd }: AddMediaDialogProps) 
       });
       return;
     }
-
     const processed = processUrl(url);
     onAdd({
       ...processed,
       title,
       description,
-      x: 2500,
-      y: 2500,
+      x: getRandomPosition(),
+      y: getRandomPosition(),
       width: 300,
     });
-
     // Reset form
     setUrl('');
     setTitle('');
     setDescription('');
     onClose();
-
     toast({
       title: 'Media Added',
       description: 'New media item has been added to the canvas',
@@ -108,7 +110,6 @@ export const AddMediaDialog = ({ isOpen, onClose, onAdd }: AddMediaDialogProps) 
             <X className="w-4 h-4" />
           </Button>
         </div>
-
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label>Media URL</Label>
@@ -123,7 +124,6 @@ export const AddMediaDialog = ({ isOpen, onClose, onAdd }: AddMediaDialogProps) 
               Supports Google Drive, YouTube, Vimeo, or direct image/video URLs
             </p>
           </div>
-
           <div>
             <Label>Title</Label>
             <Input
@@ -134,7 +134,6 @@ export const AddMediaDialog = ({ isOpen, onClose, onAdd }: AddMediaDialogProps) 
               className="mt-1"
             />
           </div>
-
           <div>
             <Label>Description</Label>
             <Textarea
@@ -146,7 +145,6 @@ export const AddMediaDialog = ({ isOpen, onClose, onAdd }: AddMediaDialogProps) 
               className="mt-1"
             />
           </div>
-
           <div className="flex gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose} className="flex-1">
               Cancel

@@ -1,7 +1,18 @@
 import { useState, useEffect } from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Edit, Eye, ZoomIn, ZoomOut, Maximize2, Save, Link as LinkIcon, Plus, Type, Paintbrush, Trash2 } from 'lucide-react';
+import {
+  Edit,
+  Eye,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+  Save,
+  Link as LinkIcon,
+  Plus,
+  Type,
+  Paintbrush,
+} from 'lucide-react';
 import { MediaItem } from './MediaItem';
 import { CategoryLabel } from './CategoryLabel';
 import { TextElement, TextElementType } from './TextElement';
@@ -14,6 +25,14 @@ import { mediaItems as defaultMediaItems, categories as defaultCategories } from
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
+/**
+ * PortfolioCanvas is the main component responsible for rendering the
+ * interactive, infinite canvas. It supports edit and view modes, dynamic
+ * loading of content from a JSON file, adding and deleting media and text
+ * elements, freehand drawing, and configurable dot‑grid backgrounds. The
+ * component is designed to be easily extended; new tools can be added via
+ * additional buttons in the control panel.
+ */
 export const PortfolioCanvas = () => {
   // Determine whether edit mode should be enabled.  When VITE_EDIT_MODE is set
   // during the build (see vite.config.ts), the global __EDIT_MODE__ constant will
@@ -27,6 +46,8 @@ export const PortfolioCanvas = () => {
   // still renders gracefully.
   const [mediaItems, setMediaItems] = useState(defaultMediaItems);
   const [categories, setCategories] = useState(defaultCategories);
+  // Additional state for text elements and drawing.  These are persisted via
+  // saveLayout() and loaded from JSON if present.
   const [textElements, setTextElements] = useState<TextElementType[]>([]);
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
   const [isDrawMode, setIsDrawMode] = useState(false);
@@ -36,25 +57,31 @@ export const PortfolioCanvas = () => {
   const [drawingData, setDrawingData] = useState('');
   const [showAddMedia, setShowAddMedia] = useState(false);
   const [currentScale, setCurrentScale] = useState(1);
+  // Dot grid state: size, opacity and color can be adjusted in edit mode.
+  const [dotSize, setDotSize] = useState(30);
+  const [dotOpacity, setDotOpacity] = useState(0.4);
+  const [dotColor, setDotColor] = useState('hsl(var(--canvas-grid))');
   const { toast } = useToast();
 
+  // Define the overall dimensions of the infinite canvas.  These values
+  // correspond to the coordinate space used for positioning items and text.
   const CANVAS_WIDTH = 25000;
   const CANVAS_HEIGHT = 25000;
 
   /**
-   * Export the current layout (media items and categories) as a JSON file.  This
-   * allows editors to persist their changes by downloading the file and
-   * committing it back to the repository (or uploading via the CMS).  The
-   * downloaded file is named `portfolio-layout.json` to distinguish it from
-   * the source `portfolio.json` in the public folder.
+   * Export the current layout (media items, categories, text and drawing) as a
+   * JSON file.  This allows editors to persist their changes by downloading
+   * the file and committing it back to the repository (or uploading via
+   * Decap CMS).  The downloaded file is named `portfolio.json` to match
+   * the convention used by the app.
    */
   const saveLayout = () => {
     try {
-      const data = JSON.stringify({ 
-        mediaItems, 
-        categories, 
-        textElements, 
-        drawingData 
+      const data = JSON.stringify({
+        mediaItems,
+        categories,
+        textElements,
+        drawingData,
       }, null, 2);
       const blob = new Blob([data], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -107,7 +134,9 @@ export const PortfolioCanvas = () => {
     }
   };
 
-  // Check URL parameter for edit mode
+  // Check URL parameter for edit mode and load JSON data on mount.  We only
+  // perform this effect once.  If the JSON fetch fails we fall back to the
+  // default TypeScript data.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const urlEdit = params.get('edit');
@@ -138,12 +167,19 @@ export const PortfolioCanvas = () => {
         if (data.categories && Array.isArray(data.categories)) {
           setCategories(data.categories);
         }
+        if (data.textElements && Array.isArray(data.textElements)) {
+          setTextElements(data.textElements);
+        }
+        if (typeof data.drawingData === 'string') {
+          setDrawingData(data.drawingData);
+        }
       })
       .catch(() => {
         // If the fetch fails for any reason, fall back to the default TS data.
         setMediaItems(defaultMediaItems);
         setCategories(defaultCategories);
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const updateMediaItem = (id: string, updates: any) => {
@@ -177,12 +213,21 @@ export const PortfolioCanvas = () => {
     );
   };
 
+  /**
+   * Add a new text element to the canvas.  Unlike the previous implementation
+   * that placed text at a fixed coordinate, we now calculate a random
+   * position near the visible portion of the canvas.  This makes it much
+   * easier to find new text elements without scrolling across the entire
+   * canvas.  The coordinates chosen here (3000–5000) correspond to a
+   * comfortable viewing region when the canvas initially loads.
+   */
   const addTextElement = () => {
+    const randomPos = () => 3000 + Math.random() * 2000;
     const newText: TextElementType = {
       id: `text-${Date.now()}`,
       text: 'Double-click to edit',
-      x: 2500,
-      y: 2500,
+      x: randomPos(),
+      y: randomPos(),
       fontSize: 24,
       fontFamily: 'Heebo, sans-serif',
       color: '#000000',
@@ -192,7 +237,7 @@ export const PortfolioCanvas = () => {
       width: 300,
     };
     setTextElements([...textElements, newText]);
-    toast({ title: 'Text Added', description: 'New text element added to canvas' });
+    toast({ title: 'Text Added', description: 'New text element added. Scroll to find it.' });
   };
 
   const deleteTextElement = (id: string) => {
@@ -206,7 +251,7 @@ export const PortfolioCanvas = () => {
     setIsEditMode(newMode);
     setIsDrawMode(false);
     setSelectedTextId(null);
-    
+
     const url = new URL(window.location.href);
     if (newMode) {
       url.searchParams.set('edit', 'true');
@@ -228,11 +273,12 @@ export const PortfolioCanvas = () => {
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-canvas-bg">
-      {/* Controls */}
+      {/* Control Bar */}
       <AnimatePresence>
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
           className="absolute top-6 right-6 z-50 flex items-center gap-2"
         >
           <Button
@@ -314,9 +360,55 @@ export const PortfolioCanvas = () => {
         </motion.div>
       </AnimatePresence>
 
+      {/* Grid Settings Panel */}
+      {isEditMode && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          className="absolute top-20 right-6 bg-card border border-border rounded-lg p-3 w-48 shadow-lg z-40"
+        >
+          <h3 className="text-sm font-semibold mb-2">Grid Settings</h3>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs mb-1">Dot Size: {dotSize}px</label>
+              <input
+                type="range"
+                min={10}
+                max={100}
+                value={dotSize}
+                onChange={(e) => setDotSize(Number(e.target.value))}
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label className="block text-xs mb-1">Opacity: {(dotOpacity * 100).toFixed(0)}%</label>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.1}
+                value={dotOpacity}
+                onChange={(e) => setDotOpacity(Number(e.target.value))}
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label className="block text-xs mb-1">Color:</label>
+              <input
+                type="color"
+                value={dotColor}
+                onChange={(e) => setDotColor(e.target.value)}
+                className="w-full h-8 rounded"
+              />
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* Text Style Toolbar */}
       <AnimatePresence>
-        {isEditMode && selectedText && (
+        {isEditMode && selectedText && !isDrawMode && (
           <TextStyleToolbar
             selectedText={selectedText}
             onUpdate={updateTextElement}
@@ -371,6 +463,7 @@ export const PortfolioCanvas = () => {
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
               className="absolute bottom-6 right-6 z-50 flex flex-col gap-2"
             >
               <Button
@@ -409,10 +502,10 @@ export const PortfolioCanvas = () => {
                 height: '100%',
               }}
             >
-              <div 
-                className="relative" 
-                style={{ 
-                  width: `${CANVAS_WIDTH}px`, 
+              <div
+                className="relative"
+                style={{
+                  width: `${CANVAS_WIDTH}px`,
                   height: `${CANVAS_HEIGHT}px`,
                   willChange: 'transform',
                 }}
@@ -421,9 +514,9 @@ export const PortfolioCanvas = () => {
                 <div
                   className="absolute inset-0"
                   style={{
-                    backgroundImage: `radial-gradient(circle, hsl(var(--canvas-grid)) 1px, transparent 1px)`,
-                    backgroundSize: '30px 30px',
-                    opacity: 0.4,
+                    backgroundImage: `radial-gradient(circle, ${dotColor} 1px, transparent 1px)`,
+                    backgroundSize: `${dotSize}px ${dotSize}px`,
+                    opacity: dotOpacity,
                   }}
                 />
 
@@ -515,6 +608,7 @@ export const PortfolioCanvas = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
           className="absolute bottom-6 left-6 bg-card border border-border rounded-lg p-4 shadow-lg max-w-xs z-40"
         >
           <h3 className="font-semibold text-sm mb-2">Edit Mode</h3>
@@ -523,7 +617,7 @@ export const PortfolioCanvas = () => {
             <li>• Resize with corner handles</li>
             <li>• Double-click text to edit</li>
             <li>• Click text to show styling</li>
-            <li>• Hover items to delete</li>
+            <li>• Use Draw button to sketch</li>
           </ul>
         </motion.div>
       )}

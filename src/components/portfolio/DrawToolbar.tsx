@@ -14,6 +14,12 @@ interface DrawToolbarProps {
   onClearDrawing: () => void;
 }
 
+/**
+ * DrawToolbar provides controls for the drawing mode.  Users can toggle
+ * between brush and eraser, pick a brush color, adjust brush size and
+ * clear the current drawing.  The toolbar slides in from the left when
+ * activated.
+ */
 export const DrawToolbar = ({
   brushColor,
   onBrushColorChange,
@@ -31,7 +37,6 @@ export const DrawToolbar = ({
       className="fixed left-6 top-1/2 -translate-y-1/2 z-50 bg-card border border-border rounded-lg shadow-lg p-4 flex flex-col gap-4 w-48"
     >
       <h3 className="font-semibold text-sm">Drawing Tools</h3>
-
       {/* Brush/Eraser Toggle */}
       <div className="flex gap-2">
         <Button
@@ -53,7 +58,6 @@ export const DrawToolbar = ({
           Eraser
         </Button>
       </div>
-
       {/* Color Picker */}
       {!isEraser && (
         <div className="flex flex-col gap-2">
@@ -68,7 +72,6 @@ export const DrawToolbar = ({
           </div>
         </div>
       )}
-
       {/* Brush Size */}
       <div className="flex flex-col gap-2">
         <Label className="text-xs">Brush Size: {brushSize}px</Label>
@@ -80,7 +83,6 @@ export const DrawToolbar = ({
           step={1}
         />
       </div>
-
       {/* Clear Drawing */}
       <Button
         variant="destructive"
