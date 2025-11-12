@@ -222,8 +222,7 @@ export const PortfolioCanvas = () => {
    * comfortable viewing region when the canvas initially loads.
    */
   const addTextElement = () => {
-    const randomPos = () => 3000 + Math.random() * 2000;
-    const newText: TextElementType = {
+  const randomPos = () => 2000 + Math.random() * 3000;    const newText: TextElementType = {
       id: `text-${Date.now()}`,
       text: 'Double-click to edit',
       x: randomPos(),
